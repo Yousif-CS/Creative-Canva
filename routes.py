@@ -1,15 +1,19 @@
 from application import app, db
 from flask import render_template, request, json, Response, redirect, flash, url_for, session
-from application.models import User, Course, Enrollment
+from application.models import User
 from application.forms import LoginForm, RegisterForm
-
-
-# connect to other people homepage
-# @app.route("/connect")
-# def connect():
-#     return render_template("connect.html", index=True )
+from email import generate_confirmation_token, confirm_token, send_email, check_confirmed
 
 @app.route("/")
+@app.route("/home")
+def home():
+    return render_template("home.html")
+
+# connect to other people homepage
+@app.route("/connect")
+def connect():
+    return render_template("connect.html")
+
 @app.route("/login", methods=['GET','POST'])
 def login():
     if session.get('username'):
@@ -34,20 +38,46 @@ def login():
 def logout():
     session['user_id']=False
     session.pop('username',None)
-    return redirect(url_for('login'))
+    return redirect(url_for('home'))
 
-# @app.route("/courses/")
-# @app.route("/courses/<term>")
-# def courses(term = None):
-#     if term is None:
-#         term = "Spring 2019"
-#     classes = Course.objects.order_by("-courseID")
-#     return render_template("courses.html", courseData=classes, courses = True, term=term )
+@app.route("/community/")
+@app.route("/community/<suburb>")
+def community(suburb = None):
+    if suburb is None:
+        suburb = user.suburb
+    community = user.objects.order_by("first_name")
+    return render_template("community.html")
+
+@app.route("/confirm/<token>")
+@login_required
+def confirm_email(token):
+    try:
+        email = confirm_token(token)
+    except:
+        flash('The confirmation link is invalid or has expired.', 'danger')
+    user = User.query.filter_by(email=email).first_or_404()
+    if user.confirmed:
+        flash('Account already confirmed. Please login.', 'success')
+    else:
+        user.confirmed = True
+        db.session.add(user)
+        db.session.commit()
+        flash('You have confirmed your account. Thanks!', 'success')
+    return redirect(url_for('connect')) 
+
+@app.route("/unconfirmed")
+@login_required
+def unconfirmed():
+    if current_user.confirmed:
+        return redirect(url_for('connect'))
+    flash('Please confirm your account!', 'warning')
+    return render_template('/unconfirmed.html')
 
 @app.route("/register", methods=['POST','GET'])
 def register():
     if session.get('username'):
         return redirect(url_for('connect'))
+
     form = RegisterForm()
     if form.validate_on_submit():
         user_id     = User.objects.count()
@@ -56,72 +86,52 @@ def register():
         password    = form.password.data
         first_name  = form.first_name.data
         last_name   = form.last_name.data
+        address     = form.address.data
+        suburb      = form.suburb.data
+        available   = True
+        confirmed   = False
 
-        user = User(user_id=user_id, email=email, first_name=first_name, last_name=last_name)
+        user = User(
+            user_id = user_id, 
+            email = email, 
+            first_name = first_name, 
+            last_name = last_name,
+            address = address,
+            suburb = suburb,
+            available = available,
+            confirmed = confirmed,
+        )
         user.set_password(password)
         user.save()
-        flash("You are successfully registered!","success")
-        return redirect(url_for('index'))
+        token = generate_confirmation_token(user.email)
+        confirm_url = url_for('user.confirm_email', token=token, _external=True)
+        html = render_template('user/activate.html', confirm_url=confirm_url)
+        subject = "Please confirm your email"
+        send_email(user.email, subject, html)
+        login(user)
+
+        flash('A confirmation email has been sent via email.', 'success')
+        return redirect(url_for("unconfirmed"))
+
+        # flash("You are successfully registered!","success")
     return render_template("register.html", title="Register", form=form, register=True)
 
+@app.route('/profile', methods=['GET', 'POST'])
+@login_required
+@check_confirmed
+def profile():
+    return render_template("profile.html")
 
-
-# @app.route("/enrollment", methods=["GET","POST"])
-# def enrollment():
-
-#     if not session.get('username'):
-#         return redirect(url_for('login'))
-
-#     courseID = request.form.get('courseID')
-#     courseTitle = request.form.get('title')
-#     user_id = session.get('user_id')
-
-#     if courseID:
-#         if Enrollment.objects(user_id=user_id,courseID=courseID):
-#             flash(f"Oops! You are already registered in this course {courseTitle}!", "danger")
-#             return redirect(url_for("courses"))
-#         else:
-#             Enrollment(user_id=user_id,courseID=courseID).save()
-#             flash(f"You are enrolled in {courseTitle}!", "success")
-
-    # classes = list( User.objects.aggregate(*[
-    #         {
-    #             '$lookup': {
-    #                 'from': 'enrollment', 
-    #                 'localField': 'user_id', 
-    #                 'foreignField': 'user_id', 
-    #                 'as': 'r1'
-    #             }
-    #         }, {
-    #             '$unwind': {
-    #                 'path': '$r1', 
-    #                 'includeArrayIndex': 'r1_id', 
-    #                 'preserveNullAndEmptyArrays': False
-    #             }
-    #         }, {
-    #             '$lookup': {
-    #                 'from': 'course', 
-    #                 'localField': 'r1.courseID', 
-    #                 'foreignField': 'courseID', 
-    #                 'as': 'r2'
-    #             }
-    #         }, {
-    #             '$unwind': {
-    #                 'path': '$r2', 
-    #                 'preserveNullAndEmptyArrays': False
-    #             }
-    #         }, {
-    #             '$match': {
-    #                 'user_id': user_id
-    #             }
-    #         }, {
-    #             '$sort': {
-    #                 'courseID': 1
-    #             }
-    #         }
-    #     ]))
-
-    return render_template("enrollment.html", enrollment=True, title="Enrollment", classes=classes)    
+@app.route('/resend')
+@login_required
+def resend_confirmation():
+    token = generate_confirmation_token(current_user.email)
+    confirm_url = url_for('user.confirm_email', token=token, _external=True)
+    html = render_template('user/activate.html', confirm_url=confirm_url)
+    subject = "Please confirm your email"
+    send_email(current_user.email, subject, html)
+    flash('A new confirmation email has been sent.', 'success')
+    return redirect(url_for('user.unconfirmed'))
 
 @app.route("/user")
 def user():

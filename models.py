@@ -7,7 +7,9 @@ class User(db.Document):
     first_name  =   db.StringField( max_length=20 )
     last_name   =   db.StringField( max_length=20 )
     email       =   db.StringField( max_length=30, unique=True )
-    password    =   db.StringField( max_length=20)
+    password    =   db.StringField( max_length=20 )
+    address     =   db.StringField( max_length=30 )
+    suburb      =   db.StringField( max_length=15 )
     available   =   db.BooleanField( default=True )
     
     def set_password(self, password):
@@ -15,17 +17,3 @@ class User(db.Document):
 
     def get_password(self, password):
         return check_password_hash(self.password, password)    
-
-# class Family(db.Document):
-    
-
-# class Course(db.Document):
-#     courseID   =   db.StringField( max_length=10, unique=True )
-#     title       =   db.StringField( max_length=100 )
-#     description =   db.StringField( max_length=255 )
-#     credits     =   db.IntField()
-#     term        =   db.StringField( max_length=25 )
-
-# class Enrollment(db.Document):
-#     user_id     =   db.IntField()
-#     courseID    =   db.StringField( max_length=10 )
