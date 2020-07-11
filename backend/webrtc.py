@@ -1,29 +1,30 @@
 from application import app
 
-import socketio
-import aiortc
-# create a Socket.IO server
-sio = socketio.AsyncServer()
+from flask_socketio import SocketIO
+from aiortc import RTCPeerConnection, RTCDataChannel, \
+                   RTCIceCandidate, RTCSessionDescription
 
-sio.attach(app)
+sio = SocketIO(app)
 
-@sio.event
-async def connect(sid, environ):
-    pass
+WebRTCConnections = {}
 
-@sio.on("answer")
+@sio.on("establish", namespace='/webrtc')
+async def establish(sid, environ):
+    WebRTCConnections = 
+
+@sio.on("answer", namespace='/webrtc')
 async def send_offer():
     pass
 
-@sio.on("offer")
+@sio.on("offer", namespace='/webrtc')
 async def send_answer():
     pass
 
-@sio.on("icecandidate")
+@sio.on("icecandidate", namespace='/webrtc')
 async def add_icecandidate():
     pass
 
-@sio.event
+@sio.on("disconnect")
 async def disconnect():
     pass
 
