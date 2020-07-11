@@ -1,10 +1,11 @@
+from application import app
+
 import socketio
 import aiortc
 # create a Socket.IO server
 sio = socketio.AsyncServer()
 
-# wrap with ASGI application
-app = socketio.ASGIApp(sio)
+sio.attach(app)
 
 @sio.event
 async def connect(sid, environ):
