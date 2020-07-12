@@ -1,4 +1,4 @@
-from app import app
+from application import app
 
 from flask_socketio import SocketIO, send, emit
 from aiortc import RTCPeerConnection, RTCDataChannel, \

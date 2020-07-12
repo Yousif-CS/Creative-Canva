@@ -7,6 +7,4 @@ app.config.from_object(Config)
 
 db = MongoEngine()
 db.init_app(app)
-
-
 from application import routes
