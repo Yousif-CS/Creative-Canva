@@ -42,7 +42,13 @@ class User(db.Document):
 #     photo = FileField()
 #     id = ObjectId()
 
-class Contact(db.Document):
-    id     =   db.StringField(unique=True)
-    confirmed  =   db.BooleanField(default=False) 
+# class Course(db.Document):
+#     courseID   =   db.StringField( max_length=10, unique=True )
+#     title       =   db.StringField( max_length=100 )
+#     description =   db.StringField( max_length=255 )
+#     credits     =   db.IntField()
+#     term        =   db.StringField( max_length=25 )
 
+# class Enrollment(db.Document):
+#     user_id     =   db.IntField()
+#     courseID    =   db.StringField( max_length=10 )

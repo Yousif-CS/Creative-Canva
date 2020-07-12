@@ -7,8 +7,4 @@ app.config.from_object(Config)
 
 db = MongoEngine()
 db.init_app(app)
-
-db.createCollection("Users")
-grid_fs = gridfs.GridFS(db)
-db.createCollection("Photos")
 from application import routes
